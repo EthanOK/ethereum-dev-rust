@@ -1,14 +1,23 @@
 mod utils;
 
+use std::env;
+
 use alloy::{
-    primitives::{address, utils::parse_units, U256},
+    primitives::{
+        address,
+        utils::{format_ether, parse_units},
+        U256,
+    },
     sol,
 };
+use dotenv::dotenv;
 use eyre::Result;
 use utils::CustomProvider;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenv().ok();
+
     // a == b
     let a = U256::from(100_u32);
 
@@ -37,15 +46,20 @@ async fn main() -> Result<()> {
 
     println!("Hello, Alloy!");
 
-    // Create a provider with the HTTP transport using the `reqwest` crate.
-    let rpc_url = "https://reth-ethereum.ithaca.xyz/rpc";
-    // Get latest block number.
-    let provider = CustomProvider::new(rpc_url)?;
+    let rpc_url = env::var("RPC_URL").map_err(|_| eyre::eyre!("RPC_URL not found in .env file"))?;
+
+    let provider = CustomProvider::new(&rpc_url)?;
+
     let latest_block = provider.get_block_number().await?;
     let chain_id = provider.get_chain_id().await?;
 
+    let vitalik = address!("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
+    let balance = provider.get_balance(vitalik).await?;
+
     println!("Latest block number: {latest_block}");
     println!("Chain ID: {chain_id}");
+
+    println!("Vitalik's balance: {} ether", format_ether(balance));
 
     Ok(())
 }

@@ -10,3 +10,5 @@ alloy = { version = "0.14.0", features = ["full"] }
 tokio = { version = "1.44", features = ["full"] }
 
 eyre = "0.6.12"
+
+dotenv = "0.15.0"
