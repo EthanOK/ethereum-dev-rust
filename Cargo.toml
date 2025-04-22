@@ -1,0 +1,12 @@
+[package]
+name = "ethereum-dev-rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+alloy = { version = "0.14.0", features = ["full"] }
+
+# async
+tokio = { version = "1.44", features = ["full"] }
+
+eyre = "0.6.12"
