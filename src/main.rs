@@ -1,10 +1,11 @@
+mod utils;
+
 use alloy::{
     primitives::{address, utils::parse_units, U256},
-    providers::ProviderBuilder,
     sol,
 };
-use alloy::providers::Provider;
 use eyre::Result;
+use utils::CustomProvider;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -37,13 +38,14 @@ async fn main() -> Result<()> {
     println!("Hello, Alloy!");
 
     // Create a provider with the HTTP transport using the `reqwest` crate.
-    let rpc_url = "https://reth-ethereum.ithaca.xyz/rpc".parse()?;
-    let provider = ProviderBuilder::new().on_http(rpc_url);
-
+    let rpc_url = "https://reth-ethereum.ithaca.xyz/rpc";
     // Get latest block number.
+    let provider = CustomProvider::new(rpc_url)?;
     let latest_block = provider.get_block_number().await?;
+    let chain_id = provider.get_chain_id().await?;
 
     println!("Latest block number: {latest_block}");
+    println!("Chain ID: {chain_id}");
 
     Ok(())
 }
