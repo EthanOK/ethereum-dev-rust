@@ -9,7 +9,7 @@ use eyre::Result;
 sol! {
    // The `rpc` attribute enables contract interaction via the provider.
    #[sol(rpc)]
-   contract ERC20 {
+   contract IERC20 {
         event Transfer(address indexed from, address indexed to, uint256 value);
         event Approval(address indexed owner, address indexed spender, uint256 value);
 
@@ -27,14 +27,14 @@ sol! {
 }
 
 // Create a custom ERC20 contract wrapper.
-pub struct CustomERC20<P: Provider> {
-    erc20: ERC20::ERC20Instance<P>,
+pub struct ERC20<P: Provider> {
+    erc20: IERC20::IERC20Instance<P>,
 }
 
 #[allow(dead_code)]
-impl<P: Provider> CustomERC20<P> {
+impl<P: Provider> ERC20<P> {
     pub fn new(address: Address, provider: P) -> Self {
-        let erc20 = ERC20::new(address, provider);
+        let erc20 = IERC20::new(address, provider);
         Self { erc20 }
     }
 

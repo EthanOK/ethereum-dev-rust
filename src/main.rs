@@ -13,7 +13,7 @@ use alloy::{
 use dotenv::dotenv;
 use eyre::Result;
 use std::env;
-use token::{CustomERC20, WETH9};
+use token::{ERC20, WETH9};
 use utils::CustomProvider;
 
 #[tokio::main]
@@ -89,7 +89,7 @@ async fn main() -> Result<()> {
     let provider = ProviderBuilder::new().connect(&rpc_url_sepolia).await?;
     // let provider = ProviderBuilder::new().on_http(rpc_url.parse()?);
 
-    let erc20 = CustomERC20::new(ygio, provider);
+    let erc20 = ERC20::new(ygio, provider);
 
     let token_name = erc20.name().await?;
     let token_symbol = erc20.symbol().await?;
@@ -110,7 +110,7 @@ async fn main() -> Result<()> {
     let provider_signer_fork = ProviderBuilder::new()
         .wallet(signer)
         .on_anvil_with_wallet_and_config(|anvil| anvil.fork(rpc_url_sepolia))?;
-    let erc20 = CustomERC20::new(ygio, &provider_signer_fork);
+    let erc20 = ERC20::new(ygio, &provider_signer_fork);
 
     let amount = parse_units("0.1", "ether")?.into();
     let tx_hash = erc20.transfer(alice, amount).await?;

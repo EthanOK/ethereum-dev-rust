@@ -1,4 +1,3 @@
-// src/block/block.rs
 use alloy::{
     eips::BlockId,
     primitives::{Address, Bytes, U256},
