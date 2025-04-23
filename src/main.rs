@@ -1,17 +1,19 @@
+mod token;
 mod utils;
-
-use std::env;
 
 use alloy::{
     primitives::{
         address,
-        utils::{format_ether, parse_units},
-        U256,
+        utils::{format_ether, format_units, parse_units},
+        Bytes, U256,
     },
-    sol,
+    providers::ProviderBuilder,
+    signers::local::PrivateKeySigner,
 };
 use dotenv::dotenv;
 use eyre::Result;
+use std::env;
+use token::CustomERC20;
 use utils::CustomProvider;
 
 #[tokio::main]
@@ -47,6 +49,10 @@ async fn main() -> Result<()> {
     println!("Hello, Alloy!");
 
     let rpc_url = env::var("RPC_URL").map_err(|_| eyre::eyre!("RPC_URL not found in .env file"))?;
+    let rpc_url_sepolia = env::var("RPC_URL_SEPOLIA")
+        .map_err(|_| eyre::eyre!("RPC_URL_SEPOLIA not found in .env file"))?;
+    let private_key =
+        env::var("PRIVATE_KEY").map_err(|_| eyre::eyre!("PRIVATE_KEY not found in .env file"))?;
 
     let provider = CustomProvider::new(&rpc_url)?;
 
@@ -60,6 +66,51 @@ async fn main() -> Result<()> {
     println!("Chain ID: {chain_id}");
 
     println!("Vitalik's balance: {} ether", format_ether(balance));
+
+    // TODO: Transfer ETH
+    println!("Transfer ETH");
+    let bob = address!("0x53188E798f2657576c9de8905478F46ac2f24b67");
+    let amount = parse_units("0.01", "ether")?.into();
+    let input_data = Bytes::default();
+    // let input_data = Bytes::from("hello bob");
+
+    let provider = CustomProvider::new_with_signer(&rpc_url_sepolia, private_key.parse()?)?;
+    let tx_hash = provider.send_transaction(bob, amount, input_data).await?;
+    println!("Transaction hash: {tx_hash}");
+
+    // TODO: Read Call ERC20 contract
+    println!("Call ERC20 contract");
+
+    let alice = address!("0x6278A1E803A76796a3A1f7F6344fE874ebfe94B2");
+
+    let ygio = address!("0x5Bb9dE881543594D17a7Df91D62459024c4EEf02");
+
+    let provider = ProviderBuilder::new().connect(&rpc_url_sepolia).await?;
+    // let provider = ProviderBuilder::new().on_http(rpc_url.parse()?);
+
+    let erc20 = CustomERC20::new(ygio, provider);
+
+    let token_name = erc20.name().await?;
+    let token_symbol = erc20.symbol().await?;
+    let token_decimals = erc20.decimals().await?;
+    let balance_token = erc20.balance_of(alice).await?;
+    let total_supply_token = erc20.total_supply().await?;
+
+    println!("Token name: {token_name}");
+    println!("{} total supply: {}", token_symbol, total_supply_token);
+    println!("alice's {} balance: {}", token_symbol, format_units(balance_token, token_decimals)?);
+
+    // TODO: Write Call ERC20 contract
+    println!("Write Call ERC20 contract");
+
+    let signer: PrivateKeySigner = private_key.parse()?;
+
+    let provider_signer = ProviderBuilder::new().wallet(signer).connect(&rpc_url_sepolia).await?;
+    let erc20 = CustomERC20::new(ygio, provider_signer);
+
+    let amount = parse_units("0.1", "ether")?.into();
+    let tx_hash = erc20.transfer(alice, amount).await?;
+    println!("Transaction hash: {tx_hash}");
 
     Ok(())
 }
