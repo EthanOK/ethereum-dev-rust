@@ -13,7 +13,7 @@ use alloy::{
 use dotenv::dotenv;
 use eyre::Result;
 use std::env;
-use token::CustomERC20;
+use token::{CustomERC20, WETH9};
 use utils::CustomProvider;
 
 #[tokio::main]
@@ -74,7 +74,8 @@ async fn main() -> Result<()> {
     let input_data = Bytes::default();
     // let input_data = Bytes::from("hello bob");
 
-    let provider = CustomProvider::new_with_signer(&rpc_url_sepolia, private_key.parse()?)?;
+    // TODO: new_with_signer or new_with_signer_fork
+    let provider = CustomProvider::new_with_signer_fork(&rpc_url_sepolia, private_key.parse()?)?;
     let tx_hash = provider.send_transaction(bob, amount, input_data).await?;
     println!("Transaction hash: {tx_hash}");
 
@@ -105,12 +106,31 @@ async fn main() -> Result<()> {
 
     let signer: PrivateKeySigner = private_key.parse()?;
 
-    let provider_signer = ProviderBuilder::new().wallet(signer).connect(&rpc_url_sepolia).await?;
-    let erc20 = CustomERC20::new(ygio, provider_signer);
+    // let provider_signer = ProviderBuilder::new().wallet(signer).connect(&rpc_url_sepolia).await?;
+    let provider_signer_fork = ProviderBuilder::new()
+        .wallet(signer)
+        .on_anvil_with_wallet_and_config(|anvil| anvil.fork(rpc_url_sepolia))?;
+    let erc20 = CustomERC20::new(ygio, &provider_signer_fork);
 
     let amount = parse_units("0.1", "ether")?.into();
     let tx_hash = erc20.transfer(alice, amount).await?;
-    println!("Transaction hash: {tx_hash}");
+    println!("ERC20 Transfer tx hash: {tx_hash}");
+
+    let weth_sepolia = address!("0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14");
+
+    let weth9 = WETH9::new(weth_sepolia, &provider_signer_fork);
+    let balance = weth9.balance_of(alice).await?;
+    println!("alice WETH9 balance: {balance}");
+    println!("deposit");
+    let tx_hash = weth9.deposit(amount).await?;
+    println!("WETH9 deposit tx hash: {tx_hash}");
+    let balance = weth9.balance_of(alice).await?;
+    println!("alice WETH9 balance: {balance}");
+    println!("withdraw");
+    let tx_hash = weth9.withdraw(amount).await?;
+    println!("WETH9 withdraw tx hash: {tx_hash}");
+    let balance = weth9.balance_of(alice).await?;
+    println!("alice WETH9 balance: {balance}");
 
     Ok(())
 }

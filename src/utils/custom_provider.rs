@@ -25,6 +25,13 @@ impl CustomProvider {
         Ok(Self { provider: Box::new(provider) })
     }
 
+    pub fn new_with_signer_fork(rpc_url: &str, signer: PrivateKeySigner) -> Result<Self> {
+        let provider = ProviderBuilder::new()
+            .wallet(signer)
+            .on_anvil_with_wallet_and_config(|anvil| anvil.fork(rpc_url))?;
+        Ok(Self { provider: Box::new(provider) })
+    }
+
     pub async fn get_block_number(&self) -> Result<u64> {
         let block_number = self.provider.get_block_number().await?;
         Ok(block_number)
@@ -56,7 +63,16 @@ impl CustomProvider {
             .value(value)
             .input(TransactionInput::both(input_data));
 
-        let transaction_hash = self.provider.send_transaction(tx).await?.watch().await?;
+        let tx = self.provider.send_transaction(tx).await?;
+        let transaction_receipt = tx.get_receipt().await?;
+
+        println!(
+            "from: {}  to: {}",
+            transaction_receipt.from,
+            transaction_receipt.to.unwrap_or_default()
+        );
+
+        let transaction_hash = transaction_receipt.transaction_hash;
 
         Ok(transaction_hash.to_string())
     }

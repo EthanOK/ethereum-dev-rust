@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = { version = "0.14.0", features = ["full"] }
+alloy = { version = "0.14.0", features = ["full","node-bindings"] }
 
 # async
 tokio = { version = "1.44", features = ["full"] }
