@@ -71,4 +71,16 @@ impl<P: Provider> ERC20<P> {
         let tx_hash = transfer.transaction_hash;
         Ok(tx_hash.to_string())
     }
+
+    pub async fn approve(&self, spender: Address, value: U256) -> Result<String> {
+        let approve_tx = self.erc20.approve(spender, value).send().await?;
+        let approve = approve_tx.get_receipt().await?;
+        let tx_hash = approve.transaction_hash;
+        Ok(tx_hash.to_string())
+    }
+
+    pub async fn transfer_from(&self, from: Address, to: Address, value: U256) -> Result<String> {
+        let tx_hash = self.erc20.transferFrom(from, to, value).send().await?.watch().await?;
+        Ok(tx_hash.to_string())
+    }
 }

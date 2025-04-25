@@ -4,8 +4,8 @@ mod utils;
 use alloy::{
     primitives::{
         address,
-        utils::{format_ether, format_units, parse_units},
-        Bytes, U256,
+        utils::{format_units, parse_units},
+        U256,
     },
     providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
@@ -14,7 +14,6 @@ use dotenv::dotenv;
 use eyre::Result;
 use std::env;
 use token::{ERC20, WETH9};
-use utils::CustomProvider;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -48,36 +47,10 @@ async fn main() -> Result<()> {
 
     println!("Hello, Alloy!");
 
-    let rpc_url = env::var("RPC_URL").map_err(|_| eyre::eyre!("RPC_URL not found in .env file"))?;
     let rpc_url_sepolia = env::var("RPC_URL_SEPOLIA")
         .map_err(|_| eyre::eyre!("RPC_URL_SEPOLIA not found in .env file"))?;
     let private_key =
         env::var("PRIVATE_KEY").map_err(|_| eyre::eyre!("PRIVATE_KEY not found in .env file"))?;
-
-    let provider = CustomProvider::new(&rpc_url)?;
-
-    let latest_block = provider.get_block_number().await?;
-    let chain_id = provider.get_chain_id().await?;
-
-    let vitalik = address!("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
-    let balance = provider.get_balance(vitalik).await?;
-
-    println!("Latest block number: {latest_block}");
-    println!("Chain ID: {chain_id}");
-
-    println!("Vitalik's balance: {} ether", format_ether(balance));
-
-    // TODO: Transfer ETH
-    println!("Transfer ETH");
-    let bob = address!("0x53188E798f2657576c9de8905478F46ac2f24b67");
-    let amount = parse_units("0.01", "ether")?.into();
-    let input_data = Bytes::default();
-    // let input_data = Bytes::from("hello bob");
-
-    // TODO: new_with_signer or new_with_signer_fork
-    let provider = CustomProvider::new_with_signer_fork(&rpc_url_sepolia, private_key.parse()?)?;
-    let tx_hash = provider.send_transaction(bob, amount, input_data).await?;
-    println!("Transaction hash: {tx_hash}");
 
     // TODO: Read Call ERC20 contract
     println!("Call ERC20 contract");
