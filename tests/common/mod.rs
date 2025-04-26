@@ -5,6 +5,8 @@ pub mod constants {
     pub const ZERO_ADDRESS: Address = address!("0x0000000000000000000000000000000000000000");
     pub const YGIO_ADDRESS: Address = address!("0x5Bb9dE881543594D17a7Df91D62459024c4EEf02");
     pub const WETH_ADDRESS: Address = address!("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
+    pub const WETH_ADDRESS_SEPOLIA: Address =
+        address!("0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14");
     pub const USDC_ADDRESS: Address = address!("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48");
     pub const USDT_ADDRESS: Address = address!("0xdAC17F958D2ee523a2206206994597C13D831ec7");
 
@@ -60,6 +62,12 @@ pub mod configs {
         let private_key = env::var("PRIVATE_KEY").expect("PRIVATE_KEY must be set");
         private_key
     }
+    pub fn get_private_key_signer() -> Result<PrivateKeySigner> {
+        dotenv().ok();
+        let private_key = env::var("PRIVATE_KEY").expect("PRIVATE_KEY must be set");
+        let private_key_signer: PrivateKeySigner = private_key.parse()?;
+        Ok(private_key_signer)
+    }
 
     pub async fn get_provider(rpc_url: &str) -> Result<DynProvider> {
         let provider = ProviderBuilder::new().connect(rpc_url).await?;
@@ -83,6 +91,13 @@ pub mod configs {
         let provider = ProviderBuilder::new()
             .wallet(signer)
             .on_anvil_with_wallet_and_config(|anvil| anvil.fork(rpc_url))?;
+        let dyn_provider = provider.erased();
+        Ok(dyn_provider)
+    }
+
+    pub async fn get_provider_fork(rpc_url: &str) -> Result<DynProvider> {
+        let provider =
+            ProviderBuilder::new().on_anvil_with_wallet_and_config(|anvil| anvil.fork(rpc_url))?;
         let dyn_provider = provider.erased();
         Ok(dyn_provider)
     }
