@@ -1,14 +1,14 @@
 use alloy::{
     eips::BlockId,
     primitives::{Address, Bytes, U256},
-    providers::{Provider, ProviderBuilder},
+    providers::{DynProvider, Provider, ProviderBuilder},
     rpc::types::{Block, TransactionInput, TransactionRequest},
     signers::local::PrivateKeySigner,
 };
 use eyre::Result;
 
 pub struct CustomProvider {
-    provider: Box<dyn Provider>,
+    provider: DynProvider,
 }
 
 #[allow(dead_code)]
@@ -16,19 +16,23 @@ impl CustomProvider {
     pub fn new(rpc_url: &str) -> Result<Self> {
         let rpc_url = rpc_url.parse()?;
         let provider = ProviderBuilder::new().on_http(rpc_url);
-        Ok(Self { provider: Box::new(provider) })
+        let dyn_provider = provider.erased();
+        Ok(Self { provider: dyn_provider })
     }
     pub fn new_with_signer(rpc_url: &str, signer: PrivateKeySigner) -> Result<Self> {
         let rpc_url = rpc_url.parse()?;
         let provider = ProviderBuilder::new().wallet(signer).on_http(rpc_url);
-        Ok(Self { provider: Box::new(provider) })
+        let dyn_provider = provider.erased();
+        Ok(Self { provider: dyn_provider })
     }
 
     pub fn new_with_signer_fork(rpc_url: &str, signer: PrivateKeySigner) -> Result<Self> {
         let provider = ProviderBuilder::new()
             .wallet(signer)
             .on_anvil_with_wallet_and_config(|anvil| anvil.fork(rpc_url))?;
-        Ok(Self { provider: Box::new(provider) })
+
+        let dyn_provider = provider.erased();
+        Ok(Self { provider: dyn_provider })
     }
 
     pub async fn get_block_number(&self) -> Result<u64> {
@@ -74,5 +78,9 @@ impl CustomProvider {
         let transaction_hash = transaction_receipt.transaction_hash;
 
         Ok(transaction_hash.to_string())
+    }
+
+    pub fn get_dyn_provider(&self) -> DynProvider {
+        self.provider.clone()
     }
 }

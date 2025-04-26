@@ -15,15 +15,7 @@ pub mod constants {
 #[allow(dead_code)]
 pub mod configs {
     use alloy::{
-        network::EthereumWallet,
-        providers::{
-            fillers::{
-                BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
-                WalletFiller,
-            },
-            layers::AnvilProvider,
-            Identity, ProviderBuilder, RootProvider,
-        },
+        providers::{DynProvider, Provider, ProviderBuilder},
         signers::local::PrivateKeySigner,
     };
     use dotenv::dotenv;
@@ -32,15 +24,14 @@ pub mod configs {
     use std::env;
 
     pub fn get_custom_provider(rpc_url: &str) -> Result<CustomProvider> {
-        dotenv().ok();
         let custom_provider = CustomProvider::new(rpc_url)?;
         Ok(custom_provider)
     }
+
     pub fn get_custom_provider_signer(
         rpc_url: &str,
         signer: PrivateKeySigner,
     ) -> Result<CustomProvider> {
-        dotenv().ok();
         let custom_provider = CustomProvider::new_with_signer(rpc_url, signer)?;
         Ok(custom_provider)
     }
@@ -49,7 +40,6 @@ pub mod configs {
         rpc_url: &str,
         signer: PrivateKeySigner,
     ) -> Result<CustomProvider> {
-        dotenv().ok();
         let custom_provider = CustomProvider::new_with_signer_fork(rpc_url, signer)?;
         Ok(custom_provider)
     }
@@ -71,99 +61,29 @@ pub mod configs {
         private_key
     }
 
-    pub async fn get_provider(
-        rpc_url: &str,
-    ) -> Result<
-        FillProvider<
-            JoinFill<
-                Identity,
-                JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
-            >,
-            alloy::providers::RootProvider,
-        >,
-    > {
-        let provider: FillProvider<
-            JoinFill<
-                Identity,
-                JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
-            >,
-            alloy::providers::RootProvider,
-        > = ProviderBuilder::new().connect(rpc_url).await?;
-        Ok(provider)
+    pub async fn get_provider(rpc_url: &str) -> Result<DynProvider> {
+        let provider = ProviderBuilder::new().connect(rpc_url).await?;
+        let dyn_provider = provider.erased();
+        Ok(dyn_provider)
     }
 
     pub async fn get_provider_signer(
         rpc_url: &str,
         signer: PrivateKeySigner,
-    ) -> Result<
-        FillProvider<
-            JoinFill<
-                JoinFill<
-                    Identity,
-                    JoinFill<
-                        GasFiller,
-                        JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>,
-                    >,
-                >,
-                WalletFiller<EthereumWallet>,
-            >,
-            RootProvider,
-        >,
-    > {
-        let provider: FillProvider<
-            JoinFill<
-                JoinFill<
-                    Identity,
-                    JoinFill<
-                        GasFiller,
-                        JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>,
-                    >,
-                >,
-                WalletFiller<EthereumWallet>,
-            >,
-            RootProvider,
-        > = ProviderBuilder::new().wallet(signer).connect(rpc_url).await?;
-        Ok(provider)
+    ) -> Result<DynProvider> {
+        let provider = ProviderBuilder::new().wallet(signer).connect(rpc_url).await?;
+        let dyn_provider = provider.erased();
+        Ok(dyn_provider)
     }
+
     pub async fn get_provider_signer_fork(
         rpc_url: &str,
         signer: PrivateKeySigner,
-    ) -> Result<
-        FillProvider<
-            JoinFill<
-                JoinFill<
-                    JoinFill<
-                        Identity,
-                        JoinFill<
-                            GasFiller,
-                            JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>,
-                        >,
-                    >,
-                    WalletFiller<EthereumWallet>,
-                >,
-                WalletFiller<EthereumWallet>,
-            >,
-            AnvilProvider<RootProvider>,
-        >,
-    > {
-        let provider: FillProvider<
-            JoinFill<
-                JoinFill<
-                    JoinFill<
-                        Identity,
-                        JoinFill<
-                            GasFiller,
-                            JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>,
-                        >,
-                    >,
-                    WalletFiller<EthereumWallet>,
-                >,
-                WalletFiller<EthereumWallet>,
-            >,
-            AnvilProvider<RootProvider>,
-        > = ProviderBuilder::new()
+    ) -> Result<DynProvider> {
+        let provider = ProviderBuilder::new()
             .wallet(signer)
             .on_anvil_with_wallet_and_config(|anvil| anvil.fork(rpc_url))?;
-        Ok(provider)
+        let dyn_provider = provider.erased();
+        Ok(dyn_provider)
     }
 }
