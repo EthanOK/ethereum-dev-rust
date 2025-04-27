@@ -4,7 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = { version = "0.14.0", features = ["full","node-bindings"] }
+alloy = { version = "0.14.0", features = ["full", "node-bindings"] }
+
+# mysql
+sea-orm = { version = "1.1.0", features = [
+    "sqlx-mysql",
+    "runtime-tokio-native-tls",
+    "macros",
+] }
+
+# date time
+chrono = "0.4.40"
 
 # async
 futures-util = "0.3"

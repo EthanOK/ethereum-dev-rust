@@ -9,6 +9,7 @@ pub mod constants {
         address!("0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14");
     pub const USDC_ADDRESS: Address = address!("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48");
     pub const USDT_ADDRESS: Address = address!("0xdAC17F958D2ee523a2206206994597C13D831ec7");
+    pub const YGME_ADDRESS: Address = address!("0x709b78b36b7208f668a3823c1d1992c0805e4f4d");
 
     pub const ETHAN_ADDRESS: Address = address!("0x6278A1E803A76796a3A1f7F6344fE874ebfe94B2");
     pub const BOB_ADDRESS: Address = address!("0x53188E798f2657576c9de8905478F46ac2f24b67");
@@ -100,5 +101,19 @@ pub mod configs {
             ProviderBuilder::new().on_anvil_with_wallet_and_config(|anvil| anvil.fork(rpc_url))?;
         let dyn_provider = provider.erased();
         Ok(dyn_provider)
+    }
+}
+
+#[allow(dead_code)]
+pub mod database_connection {
+    use eyre::Result;
+    use sea_orm::{Database, DatabaseConnection};
+
+    pub async fn get_mysql_connection() -> Result<DatabaseConnection> {
+        dotenv::dotenv().ok();
+        let database_url =
+            std::env::var("MYSQL_DATABASE_URL").expect("MYSQL_DATABASE_URL must be set");
+        let db = Database::connect(database_url).await?;
+        Ok(db)
     }
 }

@@ -4,11 +4,14 @@ use alloy::{
     sol_types::SolEvent,
 };
 use ethereum_dev::{
+    erc20_transfer_model::ActiveModel,
+    get_mysql_connection_env, handle_erc20_transfer_event,
     IERC20::{Approval, Transfer},
     IERC721,
 };
 use eyre::Result;
 use futures_util::stream::StreamExt;
+use sea_orm::ActiveValue::{NotSet, Set};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -18,6 +21,7 @@ async fn main() -> Result<()> {
     let rpc_url = format!("wss://eth-mainnet.g.alchemy.com/v2/{}", alchemy_api_key);
     let ws = WsConnect::new(rpc_url);
     let provider = ProviderBuilder::new().on_ws(ws).await?;
+    let db = get_mysql_connection_env().await?;
 
     let transfer_signature = Transfer::SIGNATURE;
     let approve_signature = Approval::SIGNATURE;
@@ -25,24 +29,47 @@ async fn main() -> Result<()> {
     // TODO: Add more topics.
     let events = vec![transfer_signature, approve_signature];
 
-    let filter =
-        Filter::new().events(events.into_iter()).from_block(BlockNumberOrTag::Number(22352699));
+    let filter = Filter::new().events(events.into_iter()).from_block(BlockNumberOrTag::Latest);
 
     // Subscribe to logs.
     let sub = provider.subscribe_logs(&filter).await?;
     let mut stream = sub.into_stream();
 
+    let mut current_block_number: Option<u64> = None;
+
     while let Some(log) = stream.next().await {
         let topics_len = log.topics().len();
         let topic0 = log.topics()[0];
+        let block_number = log.block_number.unwrap();
+        let timestamp = chrono::Utc::now().timestamp() as u64;
+
+        if current_block_number.is_none() {
+            current_block_number = Some(block_number);
+        } else if current_block_number.is_some() && block_number != current_block_number.unwrap() {
+            println!("此区块已完成: {}", current_block_number.unwrap());
+            println!("---------------------------------------------------------------------------");
+            current_block_number = Some(block_number);
+        }
 
         match topic0 {
             topic0 if topic0 == Transfer::SIGNATURE_HASH => {
                 if topics_len == 3 {
                     let (_topic0, from, to) = Transfer::decode_topics(log.topics())?;
                     let (value,) = Transfer::abi_decode_data(&log.data().data)?;
-                    println!("Contract Address: {:?}", log.address());
-                    println!("ERC20 Transfer: {from} -> {to} value:{}", value);
+
+                    let active_model = ActiveModel {
+                        id: NotSet,
+                        token: Set(log.address().to_string()),
+                        from: Set(from.to_string()),
+                        to: Set(to.to_string()),
+                        value: Set(value.to_string()),
+                        block_number: Set(log.block_number.unwrap()),
+                        timestamp: Set(log.block_timestamp.unwrap_or_else(|| timestamp)),
+                        tx_hash: Set(log.transaction_hash.unwrap().to_string()),
+                        created_at: NotSet,
+                        updated_at: NotSet,
+                    };
+                    handle_erc20_transfer_event(active_model, db.clone()).await?;
                 } else if topics_len == 4 {
                     let (_topic0, from, to, token_id) =
                         IERC721::Transfer::decode_topics(log.topics())?;

@@ -11,9 +11,10 @@ use alloy::{
     signers::local::PrivateKeySigner,
 };
 use dotenv::dotenv;
+use ethereum_dev::custom_provider::CustomProvider;
 use eyre::Result;
 use std::env;
-use token::{ERC20, WETH9};
+use token::{ERC20, ERC721, WETH9};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -82,7 +83,7 @@ async fn main() -> Result<()> {
     // let provider_signer = ProviderBuilder::new().wallet(signer).connect(&rpc_url_sepolia).await?;
     let provider_signer_fork = ProviderBuilder::new()
         .wallet(signer)
-        .on_anvil_with_wallet_and_config(|anvil| anvil.fork(rpc_url_sepolia))?;
+        .on_anvil_with_wallet_and_config(|anvil| anvil.fork(&rpc_url_sepolia))?;
     let erc20 = ERC20::new(ygio, &provider_signer_fork);
 
     let amount = parse_units("0.1", "ether")?.into();
@@ -104,6 +105,13 @@ async fn main() -> Result<()> {
     println!("WETH9 withdraw tx hash: {tx_hash}");
     let balance = weth9.balance_of(alice).await?;
     println!("alice WETH9 balance: {balance}");
+
+    let ygme = address!("0x709b78b36b7208f668a3823c1d1992c0805e4f4d");
+    let provider = CustomProvider::new(&rpc_url_sepolia)?.get_dyn_provider();
+
+    let erc721 = ERC721::new(ygme, provider);
+    let token_name = erc721.name().await?;
+    println!("Token name: {token_name}");
 
     Ok(())
 }
