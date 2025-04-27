@@ -5,7 +5,8 @@ use alloy::{
 };
 use ethereum_dev::{
     erc20_transfer_model::ActiveModel,
-    get_mysql_connection_env, handle_erc20_transfer_event,
+    erc721_transfer_model, get_mysql_connection_env, handle_erc20_transfer_event,
+    handle_erc721_transfer_event,
     IERC20::{Approval, Transfer},
     IERC721,
 };
@@ -69,20 +70,36 @@ async fn main() -> Result<()> {
                         created_at: NotSet,
                         updated_at: NotSet,
                     };
+                    // TODO: handle erc20 transfer event
                     handle_erc20_transfer_event(active_model, db.clone()).await?;
                 } else if topics_len == 4 {
                     let (_topic0, from, to, token_id) =
                         IERC721::Transfer::decode_topics(log.topics())?;
                     println!("Contract Address: {:?}", log.address());
                     println!("ERC721 Transfer: {from} -> {to} token_id:{}", token_id);
+
+                    let active_model = erc721_transfer_model::ActiveModel {
+                        id: NotSet,
+                        token: Set(log.address().to_string()),
+                        from: Set(from.to_string()),
+                        to: Set(to.to_string()),
+                        token_id: Set(token_id.to_string()),
+                        block_number: Set(log.block_number.unwrap()),
+                        timestamp: Set(log.block_timestamp.unwrap_or_else(|| timestamp)),
+                        tx_hash: Set(log.transaction_hash.unwrap().to_string()),
+                        created_at: NotSet,
+                        updated_at: NotSet,
+                    };
+                    // TODO: handle erc721 transfer event
+                    handle_erc721_transfer_event(active_model, db.clone()).await?;
                 }
             }
             topic0 if topic0 == Approval::SIGNATURE_HASH => {
                 if topics_len == 3 {
-                    let (_topic0, owner, spender) = Approval::decode_topics(log.topics())?;
-                    let (value,) = Approval::abi_decode_data(&log.data().data)?;
-                    println!("Contract Address: {:?}", log.address());
-                    println!("ERC20 Approval: {owner} -> {spender} value:{}", value);
+                    // let (_topic0, owner, spender) = Approval::decode_topics(log.topics())?;
+                    // let (value,) = Approval::abi_decode_data(&log.data().data)?;
+                    // println!("Contract Address: {:?}", log.address());
+                    // println!("ERC20 Approval: {owner} -> {spender} value:{}", value);
                 } else if topics_len == 4 {
                     let (_topic0, owner, spender, token_id) =
                         IERC721::Approval::decode_topics(log.topics())?;
