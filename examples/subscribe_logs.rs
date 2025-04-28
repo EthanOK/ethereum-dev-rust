@@ -6,7 +6,7 @@ use alloy::{
 use ethereum_dev::{
     erc20_transfer_model::ActiveModel,
     erc721_transfer_model, get_mysql_connection_env, handle_erc20_transfer_event,
-    handle_erc721_transfer_event,
+    handle_erc721_transfer_event, update_config_map_value, FILTER_START_BLOCK_NUMBER,
     IERC20::{Approval, Transfer},
     IERC721,
 };
@@ -48,6 +48,12 @@ async fn main() -> Result<()> {
             current_block_number = Some(block_number);
         } else if current_block_number.is_some() && block_number != current_block_number.unwrap() {
             println!("此区块已完成: {}", current_block_number.unwrap());
+            let _ = update_config_map_value(
+                FILTER_START_BLOCK_NUMBER,
+                current_block_number.unwrap().to_string().as_str(),
+                db.clone(),
+            )
+            .await?;
             println!("---------------------------------------------------------------------------");
             current_block_number = Some(block_number);
         }
