@@ -1,7 +1,5 @@
-use crate::config_model::ActiveModel;
 use crate::config_model::Column as ConfigColumn;
 use crate::config_model::Entity as ConfigEntity;
-use crate::config_model::Model;
 use chrono::Local;
 use eyre::Result;
 use sea_orm::entity::prelude::*;

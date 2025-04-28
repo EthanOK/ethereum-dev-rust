@@ -5,8 +5,9 @@ use alloy::{
 };
 use ethereum_dev::{
     erc20_transfer_model::ActiveModel,
-    erc721_transfer_model, get_mysql_connection_env, handle_erc20_transfer_event,
-    handle_erc721_transfer_event, update_config_map_value, FILTER_START_BLOCK_NUMBER,
+    erc721_transfer_model, get_config_map_value, get_mysql_connection_env,
+    handle_erc20_transfer_event, handle_erc721_transfer_event, update_config_map_value,
+    FILTER_START_BLOCK_NUMBER,
     IERC20::{Approval, Transfer},
     IERC721,
 };
@@ -35,6 +36,17 @@ async fn main() -> Result<()> {
     // Subscribe to logs.
     let sub = provider.subscribe_logs(&filter).await?;
     let mut stream = sub.into_stream();
+
+    let lastest_block_number = provider.get_block_number().await?;
+    let datebase_block_number =
+        get_config_map_value(FILTER_START_BLOCK_NUMBER, db.clone()).await?.parse::<u64>()?;
+
+    if datebase_block_number < lastest_block_number {
+        println!(
+            "First: Please handle the logs from {} to {}.",
+            datebase_block_number, lastest_block_number
+        );
+    }
 
     let mut current_block_number: Option<u64> = None;
 
