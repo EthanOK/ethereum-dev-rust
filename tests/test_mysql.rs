@@ -55,6 +55,7 @@ async fn test_insert_and_delete_mysql_data() -> Result<()> {
         timestamp: ActiveValue::Set(timestamp),
         block_number: ActiveValue::Set(rs.block_number.clone()),
         tx_hash: ActiveValue::Set(rs.tx_hash.clone()),
+        index: ActiveValue::Set(rs.index.clone()),
         created_at: ActiveValue::Set(Some(created_at)),
         updated_at: ActiveValue::Set(Some(created_at)),
     };

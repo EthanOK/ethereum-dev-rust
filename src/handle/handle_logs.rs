@@ -15,10 +15,10 @@ use alloy::sol_types::SolEvent;
 
 use super::{handle_erc20_transfer_event, handle_erc721_transfer_event};
 
-pub async fn handle_log(log: Log, db: DatabaseConnection) -> Result<()> {
+pub async fn handle_log(db: DatabaseConnection, log: Log, block_timestamp: u64) -> Result<()> {
     let topics_len = log.topics().len();
     let topic0 = log.topics()[0];
-    let timestamp = chrono::Utc::now().timestamp() as u64;
+    // let timestamp = chrono::Utc::now().timestamp() as u64;
 
     match topic0 {
         topic0 if topic0 == Transfer::SIGNATURE_HASH => {
@@ -33,8 +33,10 @@ pub async fn handle_log(log: Log, db: DatabaseConnection) -> Result<()> {
                     to: Set(to.to_string()),
                     value: Set(value.to_string()),
                     block_number: Set(log.block_number.unwrap()),
-                    timestamp: Set(log.block_timestamp.unwrap_or_else(|| timestamp)),
+                    // timestamp: Set(log.block_timestamp.unwrap_or_else(|| timestamp)),
+                    timestamp: Set(block_timestamp),
                     tx_hash: Set(log.transaction_hash.unwrap().to_string()),
+                    index: Set(log.log_index.unwrap()),
                     created_at: NotSet,
                     updated_at: NotSet,
                 };
@@ -53,8 +55,10 @@ pub async fn handle_log(log: Log, db: DatabaseConnection) -> Result<()> {
                     to: Set(to.to_string()),
                     token_id: Set(token_id.to_string()),
                     block_number: Set(log.block_number.unwrap()),
-                    timestamp: Set(log.block_timestamp.unwrap_or_else(|| timestamp)),
+                    // timestamp: Set(log.block_timestamp.unwrap_or_else(|| timestamp)),
+                    timestamp: Set(block_timestamp),
                     tx_hash: Set(log.transaction_hash.unwrap().to_string()),
+                    index: Set(log.log_index.unwrap()),
                     created_at: NotSet,
                     updated_at: NotSet,
                 };

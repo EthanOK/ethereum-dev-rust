@@ -13,6 +13,7 @@ pub async fn handle_erc20_transfer_event(
     active_model.updated_at = ActiveValue::Set(Some(created_at));
 
     // insert data
-    let _rusult = ERC20TransferEntity::insert(active_model).exec(&db).await?;
+    let _rusult =
+        ERC20TransferEntity::insert(active_model).on_conflict_do_nothing().exec(&db).await?;
     Ok(())
 }
