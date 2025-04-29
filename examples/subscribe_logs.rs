@@ -6,8 +6,8 @@ use alloy::{
     sol_types::SolEvent,
 };
 use ethereum_dev::{
-    get_config_map_value, get_mysql_connection_env, handle_log, update_config_map_value,
-    FILTER_START_BLOCK_NUMBER,
+    filter_logs_by_block_number, get_batch_blocks, get_config_map_value, get_mysql_connection_env,
+    handle_log, update_config_map_value, FILTER_START_BLOCK_NUMBER,
     IERC20::{Approval, Transfer},
 };
 use eyre::Result;
@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     let alchemy_api_key = std::env::var("ALCHEMY_API_KEY").expect("ALCHEMY_API_KEY not set");
     let rpc_url = format!("wss://eth-sepolia.g.alchemy.com/v2/{}", alchemy_api_key);
     let ws = WsConnect::new(rpc_url);
-    let provider = ProviderBuilder::new().on_ws(ws).await?;
+    let provider = ProviderBuilder::new().on_ws(ws.clone()).await?;
     let db = get_mysql_connection_env().await?;
 
     let transfer_signature = Transfer::SIGNATURE;
@@ -29,7 +29,8 @@ async fn main() -> Result<()> {
     // TODO: Add more topics.
     let events = vec![transfer_signature, approve_signature];
 
-    let filter = Filter::new().events(events.into_iter()).from_block(BlockNumberOrTag::Latest);
+    let filter =
+        Filter::new().events(events.clone().into_iter()).from_block(BlockNumberOrTag::Latest);
 
     // Subscribe to logs.
     let sub = provider.subscribe_logs(&filter).await?;
@@ -40,11 +41,32 @@ async fn main() -> Result<()> {
         get_config_map_value(FILTER_START_BLOCK_NUMBER, db.clone()).await?.parse::<u64>()?;
 
     if datebase_block_number < lastest_block_number {
+        let provider = ProviderBuilder::new().on_ws(ws.clone()).await?;
+        let db = get_mysql_connection_env().await?;
         println!(
             "First: Please handle the logs from {} to {}.",
             datebase_block_number, lastest_block_number
         );
-    }
+        let batch_blocks = get_batch_blocks(datebase_block_number, lastest_block_number, 100)?;
+
+        // async handle batch_blocks
+        tokio::spawn(async move {
+            for batch_block in batch_blocks {
+                let logs = filter_logs_by_block_number(
+                    provider.clone(),
+                    events.clone(),
+                    batch_block.from,
+                    batch_block.to,
+                )
+                .await
+                .unwrap();
+                for log in logs {
+                    handle_log(db.clone(), log, 0).await.unwrap();
+                }
+                println!("from: {} to: {} 区块已完成", batch_block.from, batch_block.to);
+            }
+        });
+    };
 
     let mut current_block_number: Option<u64> = None;
     let mut block_timestamps: HashMap<u64, u64> = HashMap::new();
@@ -69,6 +91,7 @@ async fn main() -> Result<()> {
         let block_number = log.block_number.unwrap();
         if log.block_number.is_some() && !block_timestamps.contains_key(&block_number) {
             let block_timestamp = provider
+                .clone()
                 .clone()
                 .get_block_by_number(BlockNumberOrTag::Number(block_number))
                 .await?

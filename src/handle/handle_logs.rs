@@ -44,9 +44,6 @@ pub async fn handle_log(db: DatabaseConnection, log: Log, block_timestamp: u64) 
                 handle_erc20_transfer_event(active_model, db.clone()).await?;
             } else if topics_len == 4 {
                 let (_topic0, from, to, token_id) = IERC721::Transfer::decode_topics(log.topics())?;
-                println!("Contract Address: {:?}", log.address());
-                println!("ERC721 Transfer: {from} -> {to} token_id: {}", token_id);
-                println!("Transaction Hash: {:?}", log.transaction_hash.unwrap());
 
                 let active_model = erc721_transfer_model::ActiveModel {
                     id: NotSet,
@@ -75,8 +72,8 @@ pub async fn handle_log(db: DatabaseConnection, log: Log, block_timestamp: u64) 
             } else if topics_len == 4 {
                 let (_topic0, owner, spender, token_id) =
                     IERC721::Approval::decode_topics(log.topics())?;
-                println!("Contract Address: {:?}", log.address());
-                println!("ERC721 Approval: {owner} -> {spender} token_id:{}", token_id);
+                // println!("Contract Address: {:?}", log.address());
+                // println!("ERC721 Approval: {owner} -> {spender} token_id:{}", token_id);
             }
         }
         _ => {
