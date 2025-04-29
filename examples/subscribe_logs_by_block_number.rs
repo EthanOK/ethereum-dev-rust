@@ -1,15 +1,13 @@
 use alloy::{
     providers::{Provider, ProviderBuilder, WsConnect},
-    rpc::types::{BlockNumberOrTag, Filter},
     sol_types::SolEvent,
 };
 use ethereum_dev::{
-    get_config_map_value, get_mysql_connection_env, handle_log, update_config_map_value,
+    filter_logs_by_block_number, get_config_map_value, get_mysql_connection_env, handle_log,
     FILTER_START_BLOCK_NUMBER,
     IERC20::{Approval, Transfer},
 };
 use eyre::Result;
-use futures_util::stream::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -27,11 +25,10 @@ async fn main() -> Result<()> {
     // TODO: Add more topics.
     let events = vec![transfer_signature, approve_signature];
 
-    let filter = Filter::new().events(events.into_iter()).from_block(BlockNumberOrTag::Latest);
+    // let filter = Filter::new().events(events.into_iter()).from_block(BlockNumberOrTag::Latest);
 
     // Subscribe to logs.
-    let sub = provider.subscribe_logs(&filter).await?;
-    let mut stream = sub.into_stream();
+    // let sub = provider.subscribe_logs(&filter).await?;
 
     let lastest_block_number = provider.get_block_number().await?;
     let datebase_block_number =
@@ -42,27 +39,18 @@ async fn main() -> Result<()> {
             "First: Please handle the logs from {} to {}.",
             datebase_block_number, lastest_block_number
         );
-    }
 
-    let mut current_block_number: Option<u64> = None;
+        let logs = filter_logs_by_block_number(
+            provider,
+            events.into_iter(),
+            datebase_block_number,
+            lastest_block_number,
+        )
+        .await?;
 
-    while let Some(log) = stream.next().await {
-        let block_number = log.block_number.unwrap();
-
-        if current_block_number.is_none() {
-            current_block_number = Some(block_number);
-        } else if current_block_number.is_some() && block_number != current_block_number.unwrap() {
-            println!("此区块已完成: {}", current_block_number.unwrap());
-            let _ = update_config_map_value(
-                FILTER_START_BLOCK_NUMBER,
-                current_block_number.unwrap().to_string().as_str(),
-                db.clone(),
-            )
-            .await?;
-            println!("---------------------------------------------------------------------------");
-            current_block_number = Some(block_number);
+        for log in logs {
+            handle_log(log, db.clone()).await?;
         }
-        handle_log(log, db.clone()).await?;
     }
 
     Ok(())
